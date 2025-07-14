@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, getUserIdFromRequest } from './openai';
 
-export async function withAIRateLimit(
+export function withAIRateLimit(
   handler: (req: NextRequest, ...args: any[]) => Promise<NextResponse>
 ) {
   return async (req: NextRequest, ...args: any[]) => {
