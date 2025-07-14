@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isTeamMember(teamId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid));
+    }
+    
+    function isPublicSnippet() {
+      return resource.data.visibility == 'public';
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false; // Users cannot delete their profiles
+    }
+    
+    // Snippets collection
+    match /snippets/{snippetId} {
+      // Anyone can read public snippets
+      allow read: if isPublicSnippet() || 
+                     isOwner(resource.data.authorId) ||
+                     (resource.data.teamId != null && isTeamMember(resource.data.teamId));
+      
+      // Only authenticated users can create snippets
+      allow create: if isAuthenticated() && 
+                       request.resource.data.authorId == request.auth.uid &&
+                       request.resource.data.createdAt == request.time &&
+                       request.resource.data.updatedAt == request.time;
+      
+      // Only owners can update their snippets
+      allow update: if isOwner(resource.data.authorId) &&
+                       request.resource.data.authorId == resource.data.authorId &&
+                       request.resource.data.updatedAt == request.time;
+      
+      // Only owners can delete their snippets
+      allow delete: if isOwner(resource.data.authorId);
+      
+      // Snippet versions subcollection
+      match /versions/{versionId} {
+        allow read: if isOwner(get(/databases/$(database)/documents/snippets/$(snippetId)).data.authorId);
+        allow create: if false; // Versions are created server-side
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+    
+    // Teams collection
+    match /teams/{teamId} {
+      allow read: if isTeamMember(teamId);
+      allow create: if isAuthenticated() && 
+                       request.resource.data.ownerId == request.auth.uid;
+      allow update: if isOwner(resource.data.ownerId);
+      allow delete: if isOwner(resource.data.ownerId);
+      
+      // Team members subcollection
+      match /members/{memberId} {
+        allow read: if isTeamMember(teamId);
+        allow create: if isOwner(get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId);
+        allow update: if isOwner(get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId);
+        allow delete: if isOwner(get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId) ||
+                        (isAuthenticated() && memberId == request.auth.uid);
+      }
+      
+      // Team invites subcollection
+      match /invites/{inviteId} {
+        allow read: if isTeamMember(teamId) || 
+                      (isAuthenticated() && resource.data.email == request.auth.token.email);
+        allow create: if isTeamMember(teamId) && 
+                        get(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)).data.role in ['admin', 'owner'];
+        allow update: if false;
+        allow delete: if isOwner(get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId);
+      }
+    }
+    
+    // Usage tracking collection
+    match /usage/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if false; // Created server-side
+      allow update: if false; // Updated server-side
+      allow delete: if false;
+    }
+    
+    // Subscriptions collection
+    match /subscriptions/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if false; // Created via Stripe webhook
+      allow update: if false; // Updated via Stripe webhook
+      allow delete: if false;
+    }
+  }
+}
