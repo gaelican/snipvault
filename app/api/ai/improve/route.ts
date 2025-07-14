@@ -47,14 +47,14 @@ async function improveHandler(req: NextRequest) {
     const improvements = parseImprovements(result.content);
 
     // Validate improved code if present
-    if (improvements.improvedCode) {
-      const validation = validateGeneratedCode(improvements.improvedCode, language);
-      improvements.validation = validation;
-    }
+    const validation = improvements.improvedCode 
+      ? validateGeneratedCode(improvements.improvedCode, language)
+      : undefined;
 
     // Cache the response
     setCachedResponse(cacheKey, {
       ...improvements,
+      validation,
       usage: result.usage,
       cost: result.cost,
       language,
@@ -71,6 +71,7 @@ async function improveHandler(req: NextRequest) {
       success: true,
       data: {
         ...improvements,
+        validation,
         usage: result.usage,
         cost: result.cost,
         language,
