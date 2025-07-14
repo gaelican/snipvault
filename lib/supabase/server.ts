@@ -25,7 +25,7 @@ export const createClient = () => {
     auth: {
       getUser: () => Promise.resolve({ data: { user: null }, error: null }),
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-      exchangeCodeForSession: () => Promise.resolve({ data: null, error: new Error('Use Firebase instead') })
+      exchangeCodeForSession: (code: string) => Promise.resolve({ data: null, error: new Error('Use Firebase instead') })
     }
   };
 };
