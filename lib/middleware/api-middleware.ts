@@ -88,8 +88,11 @@ export function withValidation<T>(
 }
 
 // Combine multiple middleware
-export function compose(...middleware: Function[]) {
-  return (handler: Function) => {
+type Handler = (req: NextRequest, ...args: any[]) => Promise<NextResponse>;
+type Middleware = (handler: Handler) => Handler;
+
+export function compose(...middleware: Middleware[]) {
+  return (handler: Handler) => {
     return middleware.reduceRight((acc, fn) => fn(acc), handler);
   };
 }

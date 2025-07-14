@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { Snippet } from '@/lib/supabase/types'
-import SnippetCard from '@/components/snippets/SnippetCard'
+import { SnippetCard } from '@/components/snippets/SnippetCard'
 import { Button } from '@/components/ui/button'
 import { PlusCircle } from 'lucide-react'
-import CreateSnippetDialog from '@/components/snippets/CreateSnippetDialog'
+import { CreateSnippetDialog } from '@/components/snippets/CreateSnippetDialog'
 
 interface TeamSnippetsProps {
   teamId: string
